@@ -26,7 +26,7 @@ const sortOptions: SelectSort[] = [
 ];
 
 interface ViewProps {
-  addToCart: (product: Product) => void;
+  addToCart: (product: Product, quantity: number) => void;
 }
 
 const View: React.FC<ViewProps> = ({ addToCart }) => {
@@ -38,6 +38,7 @@ const View: React.FC<ViewProps> = ({ addToCart }) => {
   const [error, setError] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<SelectSort | null>(sortOptions[0]);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [quantities, setQuantities] = useState<{ [key: number]: number }>({});
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -92,6 +93,17 @@ const View: React.FC<ViewProps> = ({ addToCart }) => {
     setSortOption(sortOptions[0]);
     setSearchTerm('');
     setFilteredProducts(products);
+  };
+
+  const handleQuantityChange = (productId: number, selectedOption: SelectOption | null) => {
+    if (selectedOption) {
+      setQuantities({ ...quantities, [productId]: parseInt(selectedOption.value) });
+    }
+  };
+
+  const handleAddToCart = (product: Product) => {
+    const quantity = quantities[product.id] || 1;  // Default to 1 if no quantity selected
+    addToCart(product, quantity);
   };
 
   const sortedProducts = [...filteredProducts];
@@ -156,8 +168,9 @@ const View: React.FC<ViewProps> = ({ addToCart }) => {
                 <Select
                   options={quantityOptions}
                   className="quantity-selector"
+                  onChange={(selectedOption) => handleQuantityChange(product.id, selectedOption)}
                 />
-                <button onClick={() => addToCart(product)}>Add to Cart</button>
+                <button onClick={() => handleAddToCart(product)}>Add to Cart</button>
               </div>
             </div>
             <img

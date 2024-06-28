@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Home from './components/Home';
 import View from './components/View';
 import Search from './components/Search';
@@ -34,15 +34,15 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, quantity: number) => {
     setCartItems((prevItems) => {
       const existingProduct = prevItems.find(item => item.id === product.id);
       if (existingProduct) {
         return prevItems.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
         );
       }
-      return [...prevItems, { ...product, quantity: 1 }];
+      return [...prevItems, { ...product, quantity }];
     });
   };
 
@@ -102,7 +102,6 @@ const App: React.FC = () => {
         <div className="content">
           <div className="main-content">
             <Routes>
-              <Route path="/" element={<Navigate to="/view" />} />
               <Route path="/view" element={<View addToCart={addToCart} />} />
               {isAuthenticated && <Route path="/mypage" element={<MyPage />} />}
               <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} setUserFirstName={setUserFirstName} />} />
@@ -123,6 +122,7 @@ const App: React.FC = () => {
                 handleDecreaseQuantity={handleDecreaseQuantity}
                 handleIncreaseQuantity={handleIncreaseQuantity}
                 handleQuantityChange={handleQuantityChange}
+                isAuthenticated={isAuthenticated}
               />
             </div>
           )}

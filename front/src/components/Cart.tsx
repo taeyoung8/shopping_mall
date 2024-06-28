@@ -17,6 +17,7 @@ interface CartProps {
   handleDecreaseQuantity: (id: number) => void;
   handleIncreaseQuantity: (id: number) => void;
   handleQuantityChange: (id: number, selectedOption: SelectOption | null) => void;
+  isAuthenticated: boolean;  // 로그인 상태를 확인하기 위한 prop 추가
 }
 
 const Cart: React.FC<CartProps> = ({
@@ -26,12 +27,19 @@ const Cart: React.FC<CartProps> = ({
   handleEmptyCart,
   handleDecreaseQuantity,
   handleIncreaseQuantity,
-  handleQuantityChange
+  handleQuantityChange,
+  isAuthenticated
 }) => {
   const navigate = useNavigate();
 
   const handleCheckout = () => {
-    navigate('/checkout');
+    if (isAuthenticated) {
+      navigate('/checkout');
+    } else {
+      if (window.confirm('You need to be logged in to proceed to checkout. Do you want to log in?')) {
+        navigate('/login');
+      }
+    }
   };
 
   return (

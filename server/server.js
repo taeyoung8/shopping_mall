@@ -312,6 +312,74 @@ app.post('/change-password', authenticateJWT, (req, res) => {
   });
 });
 
+// 유저 잔액 업데이트 및 상품 수량 감소
+app.post('/checkout', authenticateJWT, (req, res) => {
+  const userId = req.user.id;
+  const { items, totalPrice } = req.body;
+
+  db.beginTransaction((err) => {
+    if (err) {
+      console.error('Error starting transaction:', err);
+      return res.status(500).json({ message: 'Error starting transaction' });
+    }
+
+    // 유저 잔액 업데이트
+    const updateBalanceQuery = 'UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?';
+    db.query(updateBalanceQuery, [totalPrice, userId, totalPrice], (err, results) => {
+      if (err) {
+        return db.rollback(() => {
+          console.error('Error updating user balance:', err);
+          return res.status(500).json({ message: 'Error updating user balance' });
+        });
+      }
+
+      if (results.affectedRows === 0) {
+        return db.rollback(() => {
+          return res.status(400).json({ message: 'Insufficient balance' });
+        });
+      }
+
+      // 상품 수량 감소
+      const updateProductQuantityQuery = 'UPDATE products SET quantity = quantity - ? WHERE id = ? AND quantity >= ?';
+      const tasks = items.map((item) =>
+        new Promise((resolve, reject) => {
+          db.query(updateProductQuantityQuery, [item.quantity, item.id, item.quantity], (err, results) => {
+            if (err) {
+              return reject(err);
+            }
+
+            if (results.affectedRows === 0) {
+              return reject(new Error(`Insufficient stock for product ${item.product_name}`));
+            }
+
+            resolve();
+          });
+        })
+      );
+
+      Promise.all(tasks)
+        .then(() => {
+          db.commit((err) => {
+            if (err) {
+              return db.rollback(() => {
+                console.error('Error committing transaction:', err);
+                return res.status(500).json({ message: 'Error committing transaction' });
+              });
+            }
+
+            res.json({ message: 'Checkout successful' });
+          });
+        })
+        .catch((err) => {
+          db.rollback(() => {
+            console.error('Error during product quantity update:', err);
+            return res.status(400).json({ message: err.message });
+          });
+        });
+    });
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
