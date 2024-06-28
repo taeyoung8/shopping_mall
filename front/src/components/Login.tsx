@@ -1,17 +1,36 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  setIsAuthenticated: (isAuthenticated: boolean) => void;
+  setUserFirstName: (firstName: string | null) => void;
+}
+
+const Login: React.FC<LoginProps> = ({ setIsAuthenticated, setUserFirstName }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Add your login logic here
-    console.log('Username:', username, 'Password:', password);
-    navigate('/mypage'); // Redirect to My Page after login
+
+    try {
+      const response = await axios.post('http://localhost:8080/login', { username, password });
+      if (response.data.success) {
+        setIsAuthenticated(true);
+        setUserFirstName(response.data.firstName);
+        localStorage.setItem('token', response.data.token); // 토큰을 localStorage에 저장
+        navigate('/mypage'); // Redirect to My Page after login
+      } else {
+        // Handle login error
+        console.error('Login failed:', response.data.message);
+      }
+    } catch (err) {
+      // Handle error
+      console.error('Error logging in:', err);
+    }
   };
 
   const handleSignUp = () => {

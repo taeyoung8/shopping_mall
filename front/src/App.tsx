@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Home from './components/Home';
 import View from './components/View';
 import Search from './components/Search';
@@ -8,6 +8,8 @@ import MyPage from './components/MyPage';
 import Checkout from './components/Checkout';
 import Cart from './components/Cart';
 import Login from './components/Login';
+import Signup from './components/Signup';
+import Navigation from './components/Navigation';
 import { Product } from './interfaces/product';
 import { SelectOption } from './interfaces/selectOption';
 import './App.css';
@@ -20,6 +22,17 @@ const quantityOptions: SelectOption[] = Array.from({ length: 10 }, (_, i) => ({
 const App: React.FC = () => {
   const [cartItems, setCartItems] = useState<Product[]>([]);
   const [cartVisible, setCartVisible] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [userFirstName, setUserFirstName] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check local storage or cookie for authentication status and user info
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (user && user.isAuthenticated) {
+      setIsAuthenticated(true);
+      setUserFirstName(user.firstName);
+    }
+  }, []);
 
   const addToCart = (product: Product) => {
     setCartItems((prevItems) => {
@@ -69,29 +82,31 @@ const App: React.FC = () => {
     setCartVisible(!cartVisible);
   };
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUserFirstName(null);
+    localStorage.removeItem('user');
+  };
+
   return (
     <Router>
       <div className="App">
         <header>
-          <nav>
-            <ul>
-              <li><Link to="/view">Products</Link></li>
-              {/* <li><Link to="/search">Search</Link></li> */}
-              <li><Link to="/mypage">My Page</Link></li>
-              {/* <li><Link to="/Admin">Admin</Link></li> */}
-              <li><Link to="/login">Login</Link></li>
-            </ul>
-          </nav>
+          <Navigation
+            isAuthenticated={isAuthenticated}
+            userFirstName={userFirstName}
+            handleLogout={handleLogout}
+          />
         </header>
 
         <div className="content">
           <div className="main-content">
             <Routes>
+              <Route path="/" element={<Navigate to="/view" />} />
               <Route path="/view" element={<View addToCart={addToCart} />} />
-              {/* <Route path="/search" element={<Search />} /> */}
-              {/* <Route path="/admin" element={<Admin />} /> */}
-              <Route path="/mypage" element={<MyPage />} />
-              <Route path="/login" element={<Login />} />
+              {isAuthenticated && <Route path="/mypage" element={<MyPage />} />}
+              <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} setUserFirstName={setUserFirstName} />} />
+              <Route path="/signup" element={<Signup />} />
               <Route
                 path="/checkout"
                 element={<Checkout items={cartItems} totalPrice={totalPrice} />}
