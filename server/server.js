@@ -227,6 +227,28 @@ app.get('/user-info', authenticateJWT, (req, res) => {
   });
 });
 
+// 구매 기록 가져오기
+app.get('/purchase-history', authenticateJWT, (req, res) => {
+  const userId = req.user.id;
+
+  const query = `
+    SELECT ph.id, ph.product_id, ph.purchase_date, ph.quantity, p.product_name
+    FROM purchase_history ph
+    JOIN products p ON ph.product_id = p.id
+    WHERE ph.user_id = ?
+    ORDER BY ph.purchase_date DESC
+  `;
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching purchase history:', err);
+      res.status(500).json({ message: 'Error fetching purchase history' });
+      return;
+    }
+
+    res.json(results);
+  });
+});
+
 // 유저 정보 업데이트
 app.put('/update-user-info', authenticateJWT, (req, res) => {
   const userId = req.user.id;
@@ -339,10 +361,12 @@ app.post('/checkout', authenticateJWT, (req, res) => {
         });
       }
 
-      // 상품 수량 감소
+      // 상품 수량 감소 및 구매 기록 추가
       const updateProductQuantityQuery = 'UPDATE products SET quantity = quantity - ? WHERE id = ? AND quantity >= ?';
+      const addPurchaseHistoryQuery = 'INSERT INTO purchase_history (user_id, product_id, purchase_date, quantity) VALUES (?, ?, ?, ?)';
       const tasks = items.map((item) =>
         new Promise((resolve, reject) => {
+          const purchaseDate = new Date();
           db.query(updateProductQuantityQuery, [item.quantity, item.id, item.quantity], (err, results) => {
             if (err) {
               return reject(err);
@@ -352,7 +376,13 @@ app.post('/checkout', authenticateJWT, (req, res) => {
               return reject(new Error(`Insufficient stock for product ${item.product_name}`));
             }
 
-            resolve();
+            db.query(addPurchaseHistoryQuery, [userId, item.id, purchaseDate, item.quantity], (err, results) => {
+              if (err) {
+                return reject(err);
+              }
+
+              resolve();
+            });
           });
         })
       );

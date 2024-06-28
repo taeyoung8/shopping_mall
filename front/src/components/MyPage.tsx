@@ -10,8 +10,17 @@ interface UserInfo {
   address: string;
 }
 
+interface PurchaseHistory {
+  id: number;
+  product_id: number;
+  purchase_date: string;
+  quantity: number;
+  product_name: string;
+}
+
 const MyPage: React.FC = () => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseHistory[]>([]);
   const [newInfo, setNewInfo] = useState({ first_name: '', last_name: '', phone_number: '', email: '', password: '', address: '' });
   const [newPassword, setNewPassword] = useState({ currentPassword: '', newPassword: '', reEnterPassword: '' });
 
@@ -39,7 +48,31 @@ const MyPage: React.FC = () => {
       }
     };
 
+    const fetchPurchaseHistory = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('No token found');
+          return;
+        }
+
+        const response = await fetch('http://localhost:8080/purchase-history', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch purchase history');
+        }
+        const data = await response.json();
+        setPurchaseHistory(data);
+      } catch (error) {
+        console.error('Error fetching purchase history:', error);
+      }
+    };
+
     fetchUserInfo();
+    fetchPurchaseHistory();
   }, []);
 
   const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,9 +183,11 @@ const MyPage: React.FC = () => {
       <div className="purchase-history">
         <h3>Purchase History</h3>
         <ul>
-          <li>Order #12345 - Date: 2023-01-01 - Total: $100.00</li>
-          <li>Order #67890 - Date: 2023-02-15 - Total: $50.00</li>
-          <li>Order #11121 - Date: 2023-03-20 - Total: $75.00</li>
+          {purchaseHistory.map((purchase) => (
+            <li key={purchase.id}>
+              Order #{purchase.id} - Product: {purchase.product_name} - Date: {new Date(purchase.purchase_date).toLocaleDateString()} - Quantity: {purchase.quantity}
+            </li>
+          ))}
         </ul>
       </div>
 
